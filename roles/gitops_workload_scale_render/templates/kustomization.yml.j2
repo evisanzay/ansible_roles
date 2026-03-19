@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+{% if gitops_scale_base_resources | length > 0 %}
+
+resources:
+{% for resource in gitops_scale_base_resources %}
+  - {{ resource }}
+{% endfor %}
+{% endif %}
+{% set strategic_merge_items = gitops_workload_scale_render_items | selectattr('patch_strategy', 'equalto', 'strategic-merge') | list %}
+{% if strategic_merge_items | length > 0 %}
+
+patchesStrategicMerge:
+{% for item in strategic_merge_items %}
+  - patches/{{ item.patch_filename }}
+{% endfor %}
+{% endif %}
+{% set json_patch_items = gitops_workload_scale_render_items | selectattr('patch_strategy', 'equalto', 'patches') | list %}
+{% if json_patch_items | length > 0 %}
+
+patches:
+{% for item in json_patch_items %}
+  - path: patches/{{ item.patch_filename }}
+    target:
+      group: apps
+      version: v1
+      kind: {{ item.kind }}
+      name: {{ item.name }}
+      namespace: {{ item.namespace }}
+{% endfor %}
+{% endif %}

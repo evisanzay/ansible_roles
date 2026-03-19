@@ -1,0 +1,71 @@
+---
+- name: Validar entrada de workload scale
+  ansible.builtin.assert:
+    that:
+      - gitops_repo_checkout_dir is defined
+      - gitops_scaled_workloads is defined
+      - gitops_scaled_workloads | length > 0
+    fail_msg: "Faltan parametros obligatorios: gitops_repo_checkout_dir y gitops_scaled_workloads"
+
+- name: Crear directorios de escalado
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ gitops_workload_scale_render_root_dir }}"
+    - "{{ gitops_workload_scale_render_patches_dir }}"
+
+- name: Normalizar workloads a escalar
+  ansible.builtin.set_fact:
+    gitops_workload_scale_render_items: "{{ gitops_workload_scale_render_items | default([]) + [gitops_workload_scale_render_item] }}"
+  vars:
+    gitops_workload_scale_render_item:
+      kind: "{{ item.kind }}"
+      name: "{{ item.name }}"
+      namespace: "{{ item.namespace }}"
+      replicas: "{{ item.replicas | default(none) }}"
+      patch_strategy: "{{ item.patch_strategy | default('strategic-merge') }}"
+      api_version: apps/v1
+      patch_filename: "{{ item.namespace }}-{{ item.kind | lower }}-{{ item.name }}.yml"
+  loop: "{{ gitops_scaled_workloads }}"
+  loop_control:
+    label: "{{ item.kind }}/{{ item.namespace }}/{{ item.name }}"
+
+- name: Validar workloads soportados
+  ansible.builtin.assert:
+    that:
+      - item.kind in ['Deployment', 'StatefulSet', 'DaemonSet']
+      - item.patch_strategy in ['strategic-merge', 'patches']
+      - item.kind == 'DaemonSet' or item.replicas is not none
+      - item.kind != 'DaemonSet' or item.patch_strategy == 'strategic-merge'
+    fail_msg: "Cada workload debe usar kind Deployment/StatefulSet/DaemonSet, strategy strategic-merge/patches y replicas cuando aplique"
+  loop: "{{ gitops_workload_scale_render_items }}"
+  loop_control:
+    label: "{{ item.kind }}/{{ item.namespace }}/{{ item.name }}"
+
+- name: Renderizar parches strategic merge
+  ansible.builtin.template:
+    src: workload-patch-strategic-merge.yml.j2
+    dest: "{{ gitops_workload_scale_render_patches_dir }}/{{ item.patch_filename }}"
+    mode: "0644"
+  loop: "{{ gitops_workload_scale_render_items }}"
+  loop_control:
+    label: "{{ item.patch_filename }}"
+  when: item.patch_strategy == 'strategic-merge'
+
+- name: Renderizar parches JSON6902
+  ansible.builtin.template:
+    src: workload-patch-json6902.yml.j2
+    dest: "{{ gitops_workload_scale_render_patches_dir }}/{{ item.patch_filename }}"
+    mode: "0644"
+  loop: "{{ gitops_workload_scale_render_items }}"
+  loop_control:
+    label: "{{ item.patch_filename }}"
+  when: item.patch_strategy == 'patches'
+
+- name: Renderizar kustomization de escalado
+  ansible.builtin.template:
+    src: kustomization.yml.j2
+    dest: "{{ gitops_workload_scale_render_kustomization_file }}"
+    mode: "0644"

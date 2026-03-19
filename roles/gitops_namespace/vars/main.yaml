@@ -1,8 +1,0 @@
----
-workspace_dir: "{{ gitops_workspace_dir }}"
-repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
-
-namespace_root_dir: "{{ repo_checkout_dir }}/{{ repo_path }}/{{ namespace_name }}"
-namespace_rbac_dir: "{{ namespace_root_dir }}/rbac"
-namespace_np_dir: "{{ namespace_root_dir }}/networkpolicies"
-namespace_sa_dir: "{{ namespace_root_dir }}/serviceaccounts"

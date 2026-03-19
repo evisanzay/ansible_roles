@@ -1,0 +1,9 @@
+---
+gitops_namespace_render_workspace_dir: "{{ gitops_workspace_dir }}"
+gitops_namespace_render_repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
+
+gitops_namespace_render_root_dir: "{{ gitops_namespace_render_repo_checkout_dir }}/{{ repo_path }}/{{ namespace_name }}"
+gitops_namespace_render_rbac_dir: "{{ gitops_namespace_render_root_dir }}/rbac"
+gitops_namespace_render_networkpolicy_dir: "{{ gitops_namespace_render_root_dir }}/networkpolicies"
+gitops_namespace_render_serviceaccounts_dir: "{{ gitops_namespace_render_root_dir }}/serviceaccounts"
+gitops_namespace_render_parent_kustomization_file: "{{ gitops_namespace_render_repo_checkout_dir }}/{{ repo_path }}/kustomization.yaml"

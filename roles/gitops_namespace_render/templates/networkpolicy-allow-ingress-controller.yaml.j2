@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-controller
+  namespace: {{ namespace_name }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ network_policies.ingress_controller_namespace }}
+          podSelector:
+            matchLabels:
+{% for key, value in network_policies.ingress_controller_pod_selector.items() %}
+              {{ key }}: {{ value | to_json }}
+{% endfor %}

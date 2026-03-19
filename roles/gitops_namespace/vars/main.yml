@@ -1,0 +1,9 @@
+---
+# Aliases de compatibilidad para el rol histórico `gitops_namespace`.
+workspace_dir: "{{ gitops_namespace_render_workspace_dir }}"
+repo_checkout_dir: "{{ gitops_namespace_render_repo_checkout_dir }}"
+
+namespace_root_dir: "{{ gitops_namespace_render_root_dir }}"
+namespace_rbac_dir: "{{ gitops_namespace_render_rbac_dir }}"
+namespace_np_dir: "{{ gitops_namespace_render_networkpolicy_dir }}"
+namespace_sa_dir: "{{ gitops_namespace_render_serviceaccounts_dir }}"

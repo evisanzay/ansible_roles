@@ -1,0 +1,12 @@
+---
+git_branch: main
+repo_path: clusters/prod/acm-policies
+workspace_base: /tmp
+
+acm_policy_remediation_action: inform
+acm_policy_placement_name: "{{ acm_policy_name }}-placement"
+acm_policy_placementbinding_name: "{{ acm_policy_name }}-placementbinding"
+acm_configurationpolicy_name: "{{ acm_policy_name }}-configuration"
+acm_configurationpolicy_severity: low
+
+git_commit_message: "Alta politica ACM {{ acm_policy_name }}"

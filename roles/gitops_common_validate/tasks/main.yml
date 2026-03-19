@@ -1,0 +1,18 @@
+---
+- name: Calcular variables obligatorias ausentes
+  ansible.builtin.set_fact:
+    gitops_common_missing_vars: >-
+      {%- set missing = [] -%}
+      {%- for var_name in (gitops_validate_required_vars | default([])) -%}
+      {%- set value = vars[var_name] | default(none) -%}
+      {%- if value is none or (value is string and value | trim == '') -%}
+      {%- set _ = missing.append(var_name) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ missing }}
+
+- name: Validar variables obligatorias
+  ansible.builtin.assert:
+    that:
+      - gitops_common_missing_vars | length == 0
+    fail_msg: "Faltan variables obligatorias: {{ gitops_common_missing_vars | join(', ') }}"

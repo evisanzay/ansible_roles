@@ -1,0 +1,4 @@
+---
+gitops_workload_scale_render_root_dir: "{{ gitops_repo_checkout_dir }}/{{ repo_path }}"
+gitops_workload_scale_render_patches_dir: "{{ gitops_workload_scale_render_root_dir }}/patches"
+gitops_workload_scale_render_kustomization_file: "{{ gitops_workload_scale_render_root_dir }}/kustomization.yml"

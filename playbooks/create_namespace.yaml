@@ -1,7 +1,0 @@
----
-- name: Crear namespace completo para GitOps con Kustomize
-  hosts: localhost
-  gather_facts: false
-
-  roles:
-    - role: gitops_namespace
