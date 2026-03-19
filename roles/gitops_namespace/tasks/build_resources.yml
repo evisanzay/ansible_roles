@@ -1,16 +1,87 @@
 ---
-- name: Construir lista dinámica de service accounts
+- name: Usar bindings de grupos explícitos
   ansible.builtin.set_fact:
-    dynamic_sa_resources: "{{ service_accounts | map(attribute='name') | map('regex_replace', '^(.*)$', 'serviceaccounts/\\1.yaml') | list }}"
+    namespace_rbac_group_bindings: "{{ gitops_rbac_group_bindings }}"
+  when: gitops_rbac_group_bindings is defined
+
+- name: Normalizar bindings de grupos heredados
+  ansible.builtin.set_fact:
+    namespace_rbac_group_bindings:
+      - name: "{{ namespace_name }}-admin-group"
+        namespace: "{{ namespace_name }}"
+        role_ref_kind: ClusterRole
+        role_ref_name: admin
+        subjects:
+          - name: "{{ admin_group }}"
+      - name: "{{ namespace_name }}-reader-group"
+        namespace: "{{ namespace_name }}"
+        role_ref_kind: ClusterRole
+        role_ref_name: view
+        subjects:
+          - name: "{{ reader_group }}"
+  when: gitops_rbac_group_bindings is not defined
+
+- name: Normalizar serviceaccounts
+  ansible.builtin.set_fact:
+    namespace_rbac_serviceaccounts: "{{ gitops_rbac_serviceaccounts | default(namespace_rbac_legacy_serviceaccounts) }}"
+  vars:
+    namespace_rbac_legacy_serviceaccounts: >-
+      {{
+        (ns_service_accounts | default(default_service_accounts))
+        | map('combine', {'namespace': namespace_name, 'create': true})
+        | list
+      }}
+
+- name: Normalizar bindings de serviceaccounts
+  ansible.builtin.set_fact:
+    namespace_rbac_serviceaccount_bindings: "{{ gitops_rbac_serviceaccount_bindings | default(namespace_rbac_legacy_serviceaccount_bindings) }}"
+  vars:
+    namespace_rbac_legacy_serviceaccount_bindings: >-
+      {%- set bindings = [] -%}
+      {%- for sa in (ns_service_accounts | default(default_service_accounts)) -%}
+      {%- set _ = bindings.append({
+            'name': namespace_name ~ '-sa-' ~ sa.name ~ '-binding',
+            'namespace': namespace_name,
+            'role_ref_kind': 'ClusterRole',
+            'role_ref_name': sa.cluster_role,
+            'subjects': [
+              {
+                'name': sa.name,
+                'namespace': namespace_name
+              }
+            ]
+          }) -%}
+      {%- endfor -%}
+      {{ bindings }}
+
+- name: Construir lista dinámica de serviceaccounts renderizadas
+  ansible.builtin.set_fact:
+    dynamic_sa_resources: >-
+      {{
+        namespace_rbac_serviceaccounts
+        | rejectattr('create', 'defined')
+        | map(attribute='name')
+        | map('regex_replace', '^(.*)$', 'serviceaccounts/\\1.yaml')
+        | list
+        +
+        (
+          namespace_rbac_serviceaccounts
+          | selectattr('create', 'defined')
+          | selectattr('create')
+          | map(attribute='name')
+          | map('regex_replace', '^(.*)$', 'serviceaccounts/\\1.yaml')
+          | list
+        )
+      }}
 
 - name: Definir recursos base
   ansible.builtin.set_fact:
-    base_kustomize_resources:
-      - namespace.yaml
-      - quota.yaml
-      - limitrange.yaml
-      - rbac/groups.yaml
-      - rbac/serviceaccounts-bindings.yaml
+    base_kustomize_resources: >-
+      {{
+        ['namespace.yaml', 'quota.yaml', 'limitrange.yaml']
+        + (['rbac/groups.yaml'] if namespace_rbac_group_bindings | length > 0 else [])
+        + (['rbac/serviceaccounts-bindings.yaml'] if namespace_rbac_serviceaccount_bindings | length > 0 else [])
+      }}
 
 #- name: Definir network policies habilitadas
 #  ansible.builtin.set_fact:

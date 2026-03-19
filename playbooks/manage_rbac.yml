@@ -1,0 +1,7 @@
+---
+- name: Renderizar RBAC reutilizable
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - role: gitops_rbac_render

@@ -4,9 +4,19 @@
     that:
       - repo_url is defined
       - namespace_name is defined
-      - admin_group is defined
-      - reader_group is defined
-    fail_msg: "Faltan parámetros obligatorios: repo_url, namespace_name, admin_group, reader_group"
+      - >
+        (
+          (gitops_rbac_group_bindings is defined)
+          and
+          (gitops_rbac_group_bindings | length > 0)
+        )
+        or
+        (
+          (admin_group is defined)
+          and
+          (reader_group is defined)
+        )
+    fail_msg: "Faltan parámetros obligatorios: repo_url, namespace_name y RBAC de grupos (gitops_rbac_group_bindings o admin_group/reader_group)"
 
 - name: Validar nombre del namespace
   ansible.builtin.assert:

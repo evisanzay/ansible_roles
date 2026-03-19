@@ -1,6 +1,4 @@
 ---
-service_accounts: "{{ ns_service_accounts | default(default_service_accounts) }}"
-
 workspace_dir: "{{ gitops_workspace_dir }}"
 repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
 
