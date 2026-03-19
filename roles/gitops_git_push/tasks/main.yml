@@ -1,0 +1,47 @@
+---
+- name: Validar parametros de git push
+  ansible.builtin.assert:
+    that:
+      - gitops_repo_checkout_dir is defined
+      - gitops_git_add_paths is defined
+      - gitops_commit_message is defined
+      - gitops_branch is defined
+    fail_msg: "Faltan parametros obligatorios: gitops_repo_checkout_dir, gitops_git_add_paths, gitops_commit_message, gitops_branch"
+
+- name: Comprobar cambios git
+  ansible.builtin.command:
+    cmd: git status --porcelain
+    chdir: "{{ gitops_repo_checkout_dir }}"
+  register: gitops_git_status
+  changed_when: false
+
+- name: Anadir paths a git
+  ansible.builtin.command:
+    argv: "{{ ['git', 'add'] + gitops_git_add_paths }}"
+    chdir: "{{ gitops_repo_checkout_dir }}"
+  when: gitops_git_status.stdout != ""
+
+- name: Hacer commit
+  ansible.builtin.command:
+    argv:
+      - git
+      - commit
+      - -m
+      - "{{ gitops_commit_message }}"
+    chdir: "{{ gitops_repo_checkout_dir }}"
+  when: gitops_git_status.stdout != ""
+
+- name: Hacer push
+  ansible.builtin.command:
+    argv:
+      - git
+      - push
+      - origin
+      - "{{ gitops_branch }}"
+    chdir: "{{ gitops_repo_checkout_dir }}"
+  when: gitops_git_status.stdout != ""
+
+- name: Informar si no hubo cambios
+  ansible.builtin.debug:
+    msg: "No hubo cambios que subir al repositorio"
+  when: gitops_git_status.stdout == ""

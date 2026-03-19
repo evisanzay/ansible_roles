@@ -1,13 +1,20 @@
 ---
-- name: Fijar timestamp del workspace
-  ansible.builtin.set_fact:
-    workspace_dir: "{{ workspace_base }}/gitops-{{ namespace_name }}-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-
 - name: Validaciones
   import_tasks: validate.yml
 
 - name: Preparar workspace y clonar repo
-  import_tasks: workspace.yml
+  ansible.builtin.include_role:
+    name: gitops_workspace
+  vars:
+    gitops_repo_url: "{{ repo_url }}"
+    gitops_branch: "{{ git_branch }}"
+    gitops_workspace_base: "{{ workspace_base }}"
+    gitops_workspace_name: "{{ namespace_name }}"
+    gitops_root_dirs:
+      - "{{ repo_path }}/{{ namespace_name }}"
+      - "{{ repo_path }}/{{ namespace_name }}/rbac"
+      - "{{ repo_path }}/{{ namespace_name }}/networkpolicies"
+      - "{{ repo_path }}/{{ namespace_name }}/serviceaccounts"
 
 - name: Construir lista de recursos
   import_tasks: build_resources.yml
@@ -16,7 +23,18 @@
   import_tasks: render.yml
 
 - name: Commit y push
-  import_tasks: git_push.yml
+  ansible.builtin.include_role:
+    name: gitops_git_push
+  vars:
+    gitops_repo_checkout_dir: "{{ repo_checkout_dir }}"
+    gitops_git_add_paths:
+      - "{{ repo_path }}/{{ namespace_name }}"
+      - "{{ repo_path }}/kustomization.yaml"
+    gitops_commit_message: "{{ git_commit_message }}"
+    gitops_branch: "{{ git_branch }}"
 
 - name: Limpiar workspace
-  import_tasks: cleanup.yml
+  ansible.builtin.include_role:
+    name: gitops_cleanup
+  vars:
+    gitops_workspace_dir: "{{ workspace_dir }}"

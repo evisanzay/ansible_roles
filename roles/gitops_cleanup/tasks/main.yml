@@ -1,0 +1,5 @@
+---
+- name: Borrar workspace temporal
+  ansible.builtin.file:
+    path: "{{ gitops_workspace_dir }}"
+    state: absent
