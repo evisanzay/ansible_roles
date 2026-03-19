@@ -1,0 +1,11 @@
+---
+gitops_rbac_group_bindings: []
+gitops_rbac_serviceaccounts: []
+gitops_rbac_serviceaccount_bindings: []
+
+gitops_rbac_namespace: ""
+gitops_rbac_rbac_dir: ""
+gitops_rbac_serviceaccounts_dir: ""
+
+gitops_rbac_group_bindings_filename: groups.yaml
+gitops_rbac_serviceaccount_bindings_filename: serviceaccounts-bindings.yaml

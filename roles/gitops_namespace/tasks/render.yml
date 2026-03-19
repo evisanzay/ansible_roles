@@ -23,26 +23,16 @@
     dest: "{{ namespace_root_dir }}/limitrange.yaml"
     mode: "0644"
 
-- name: Renderizar rbac/groups.yaml
-  ansible.builtin.template:
-    src: rbac-groups.yaml.j2
-    dest: "{{ namespace_rbac_dir }}/groups.yaml"
-    mode: "0644"
-
-- name: Renderizar serviceaccounts
-  ansible.builtin.template:
-    src: serviceaccount.yaml.j2
-    dest: "{{ namespace_sa_dir }}/{{ item.name }}.yaml"
-    mode: "0644"
-  loop: "{{ service_accounts }}"
-  loop_control:
-    label: "{{ item.name }}"
-
-- name: Renderizar rbac/serviceaccounts-bindings.yaml
-  ansible.builtin.template:
-    src: rbac-serviceaccounts-bindings.yaml.j2
-    dest: "{{ namespace_rbac_dir }}/serviceaccounts-bindings.yaml"
-    mode: "0644"
+- name: Renderizar RBAC y serviceaccounts
+  ansible.builtin.include_role:
+    name: gitops_rbac_render
+  vars:
+    gitops_rbac_namespace: "{{ namespace_name }}"
+    gitops_rbac_rbac_dir: "{{ namespace_rbac_dir }}"
+    gitops_rbac_serviceaccounts_dir: "{{ namespace_sa_dir }}"
+    gitops_rbac_group_bindings: "{{ namespace_rbac_group_bindings }}"
+    gitops_rbac_serviceaccounts: "{{ namespace_rbac_serviceaccounts }}"
+    gitops_rbac_serviceaccount_bindings: "{{ namespace_rbac_serviceaccount_bindings }}"
 
 - name: Renderizar networkpolicy default deny
   ansible.builtin.template:

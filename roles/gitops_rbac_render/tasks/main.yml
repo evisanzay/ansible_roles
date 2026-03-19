@@ -1,0 +1,49 @@
+---
+- name: Crear directorio RBAC si aplica
+  ansible.builtin.file:
+    path: "{{ gitops_rbac_rbac_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - gitops_rbac_rbac_dir | length > 0
+    - (gitops_rbac_group_bindings | length > 0) or (gitops_rbac_serviceaccount_bindings | length > 0)
+
+- name: Crear directorio de serviceaccounts si aplica
+  ansible.builtin.file:
+    path: "{{ gitops_rbac_serviceaccounts_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - gitops_rbac_serviceaccounts_dir | length > 0
+    - (gitops_rbac_serviceaccounts | rejectattr('create', 'defined') | list | length > 0)
+      or (gitops_rbac_serviceaccounts | selectattr('create', 'defined') | selectattr('create') | list | length > 0)
+
+- name: Renderizar bindings de grupos
+  ansible.builtin.template:
+    src: group-bindings.yaml.j2
+    dest: "{{ gitops_rbac_rbac_dir }}/{{ gitops_rbac_group_bindings_filename }}"
+    mode: "0644"
+  when:
+    - gitops_rbac_rbac_dir | length > 0
+    - gitops_rbac_group_bindings | length > 0
+
+- name: Renderizar serviceaccounts
+  ansible.builtin.template:
+    src: serviceaccount.yaml.j2
+    dest: "{{ gitops_rbac_serviceaccounts_dir }}/{{ item.name }}.yaml"
+    mode: "0644"
+  loop: "{{ gitops_rbac_serviceaccounts }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - gitops_rbac_serviceaccounts_dir | length > 0
+    - item.create | default(true) | bool
+
+- name: Renderizar bindings de serviceaccounts
+  ansible.builtin.template:
+    src: serviceaccount-bindings.yaml.j2
+    dest: "{{ gitops_rbac_rbac_dir }}/{{ gitops_rbac_serviceaccount_bindings_filename }}"
+    mode: "0644"
+  when:
+    - gitops_rbac_rbac_dir | length > 0
+    - gitops_rbac_serviceaccount_bindings | length > 0
