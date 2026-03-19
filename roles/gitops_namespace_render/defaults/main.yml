@@ -1,0 +1,39 @@
+---
+git_branch: main
+repo_path: clusters/prod/namespaces
+workspace_base: /tmp
+
+quota:
+  requests_cpu: "2"
+  requests_memory: "4Gi"
+  limits_cpu: "4"
+  limits_memory: "8Gi"
+  pods: "20"
+
+limitrange:
+  default_cpu: "500m"
+  default_memory: "512Mi"
+  default_request_cpu: "250m"
+  default_request_memory: "256Mi"
+
+namespace_labels:
+  mapfre.com/type: autoservice
+namespace_annotations: {}
+
+default_service_accounts:
+  - name: deployer
+    cluster_role: edit
+  - name: reader
+    cluster_role: view
+  - name: job-runner
+    cluster_role: edit
+
+network_policies:
+  default_deny: true
+  allow_dns: true
+  allow_ingress_controller: true
+  ingress_controller_namespace: ingress-nginx
+  ingress_controller_pod_selector:
+    app.kubernetes.io/name: ingress-nginx
+
+git_commit_message: "Alta namespace {{ namespace_name }}"

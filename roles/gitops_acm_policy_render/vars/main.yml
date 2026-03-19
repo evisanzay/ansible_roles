@@ -1,0 +1,3 @@
+---
+gitops_acm_policy_render_root_dir: "{{ gitops_repo_checkout_dir }}/{{ repo_path }}/{{ acm_policy_name }}"
+gitops_acm_policy_render_parent_kustomization_file: "{{ gitops_repo_checkout_dir }}/{{ repo_path }}/kustomization.yaml"

@@ -1,0 +1,52 @@
+---
+- name: Validar parametros obligatorios de ACM
+  ansible.builtin.assert:
+    that:
+      - gitops_repo_checkout_dir is defined
+      - acm_policy_name is defined
+      - acm_policy_namespace is defined
+      - acm_configurationpolicy_object_definitions is defined
+      - acm_configurationpolicy_object_definitions | length > 0
+    fail_msg: "Faltan parametros obligatorios: gitops_repo_checkout_dir, acm_policy_name, acm_policy_namespace y acm_configurationpolicy_object_definitions"
+
+- name: Crear directorio de la politica ACM
+  ansible.builtin.file:
+    path: "{{ gitops_acm_policy_render_root_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Crear kustomization padre de ACM si no existe
+  ansible.builtin.copy:
+    dest: "{{ gitops_acm_policy_render_parent_kustomization_file }}"
+    mode: "0644"
+    force: false
+    content: |
+      apiVersion: kustomize.config.k8s.io/v1beta1
+      kind: Kustomization
+
+      resources:
+
+- name: Renderizar recursos ACM base
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ gitops_acm_policy_render_root_dir }}/{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - src: policy.yml.j2
+      dest: policy.yml
+    - src: placement.yml.j2
+      dest: placement.yml
+    - src: placementbinding.yml.j2
+      dest: placementbinding.yml
+    - src: configuration-policy.yml.j2
+      dest: configuration-policy.yml
+    - src: kustomization.yml.j2
+      dest: kustomization.yml
+
+- name: Anadir politica ACM al kustomization padre
+  ansible.builtin.lineinfile:
+    path: "{{ gitops_acm_policy_render_parent_kustomization_file }}"
+    line: "  - {{ acm_policy_name }}"
+    insertafter: "^resources:"
+    regexp: "^\\s+-\\s+{{ acm_policy_name }}$"
+    state: present

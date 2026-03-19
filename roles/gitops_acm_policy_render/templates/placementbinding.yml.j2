@@ -1,0 +1,13 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: {{ acm_policy_placementbinding_name }}
+  namespace: {{ acm_policy_namespace }}
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: {{ acm_policy_placement_name }}
+subjects:
+  - apiGroup: policy.open-cluster-management.io
+    kind: Policy
+    name: {{ acm_policy_name }}

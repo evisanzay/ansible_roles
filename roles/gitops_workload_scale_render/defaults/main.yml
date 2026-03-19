@@ -1,0 +1,8 @@
+---
+git_branch: main
+repo_path: clusters/prod/overlays/scaling
+workspace_base: /tmp
+
+gitops_scale_base_resources: []
+
+git_commit_message: "Actualizar escalado de workloads"

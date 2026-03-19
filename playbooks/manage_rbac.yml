@@ -2,6 +2,102 @@
 - name: Renderizar RBAC reutilizable
   hosts: localhost
   gather_facts: false
+  tasks:
+    - name: Validar parametros de entrada
+      ansible.builtin.include_role:
+        name: gitops_common_validate
+      vars:
+        gitops_validate_required_vars:
+          - repo_url
+          - namespace_name
 
-  roles:
-    - role: gitops_rbac_render
+    - name: Orquestar gestion de RBAC GitOps
+      block:
+        - name: Preparar workspace GitOps
+          ansible.builtin.include_role:
+            name: gitops_workspace
+          vars:
+            gitops_repo_url: "{{ repo_url }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+            gitops_workspace_base: "{{ workspace_base | default('/tmp') }}"
+            gitops_workspace_name: "{{ namespace_name ~ '-rbac' }}"
+            gitops_root_dirs:
+              - "{{ repo_path | default('clusters/prod/namespaces') }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name ~ '/rbac' }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name ~ '/serviceaccounts' }}"
+
+        - name: Normalizar serviceaccounts legacy
+          ansible.builtin.set_fact:
+            gitops_manage_rbac_serviceaccounts: "{{ gitops_rbac_serviceaccounts | default(gitops_manage_rbac_legacy_serviceaccounts) }}"
+          vars:
+            gitops_manage_rbac_legacy_serviceaccounts: >-
+              {{
+                (
+                  ns_service_accounts
+                  | default(default_service_accounts | default([
+                    {'name': 'deployer', 'cluster_role': 'edit'},
+                    {'name': 'reader', 'cluster_role': 'view'},
+                    {'name': 'job-runner', 'cluster_role': 'edit'}
+                  ]))
+                )
+                | map('combine', {'namespace': namespace_name, 'create': true})
+                | list
+              }}
+
+        - name: Normalizar bindings de serviceaccounts legacy
+          ansible.builtin.set_fact:
+            gitops_manage_rbac_serviceaccount_bindings: "{{ gitops_rbac_serviceaccount_bindings | default(gitops_manage_rbac_legacy_serviceaccount_bindings) }}"
+          vars:
+            gitops_manage_rbac_legacy_serviceaccount_bindings: >-
+              {%- set bindings = [] -%}
+              {%- for sa in (
+                    ns_service_accounts
+                    | default(default_service_accounts | default([
+                      {'name': 'deployer', 'cluster_role': 'edit'},
+                      {'name': 'reader', 'cluster_role': 'view'},
+                      {'name': 'job-runner', 'cluster_role': 'edit'}
+                    ]))
+                  ) -%}
+              {%- set _ = bindings.append({
+                    'name': namespace_name ~ '-sa-' ~ sa.name ~ '-binding',
+                    'namespace': namespace_name,
+                    'role_ref_kind': 'ClusterRole',
+                    'role_ref_name': sa.cluster_role,
+                    'subjects': [
+                      {
+                        'name': sa.name,
+                        'namespace': namespace_name
+                      }
+                    ]
+                  }) -%}
+              {%- endfor -%}
+              {{ bindings }}
+
+        - name: Renderizar RBAC
+          ansible.builtin.include_role:
+            name: gitops_rbac_render
+          vars:
+            gitops_rbac_namespace: "{{ namespace_name }}"
+            gitops_rbac_rbac_dir: "{{ gitops_repo_checkout_dir }}/{{ repo_path | default('clusters/prod/namespaces') }}/{{ namespace_name }}/rbac"
+            gitops_rbac_serviceaccounts_dir: "{{ gitops_repo_checkout_dir }}/{{ repo_path | default('clusters/prod/namespaces') }}/{{ namespace_name }}/serviceaccounts"
+            gitops_rbac_group_bindings: "{{ gitops_rbac_group_bindings | default([]) }}"
+            gitops_rbac_serviceaccounts: "{{ gitops_manage_rbac_serviceaccounts }}"
+            gitops_rbac_serviceaccount_bindings: "{{ gitops_manage_rbac_serviceaccount_bindings }}"
+
+        - name: Confirmar cambios en Git
+          ansible.builtin.include_role:
+            name: gitops_git_push
+          vars:
+            gitops_repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
+            gitops_git_add_paths:
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name }}"
+            gitops_commit_message: "{{ git_commit_message | default('Actualizar RBAC namespace ' ~ namespace_name) }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+      always:
+        - name: Limpiar workspace temporal
+          ansible.builtin.include_role:
+            name: gitops_cleanup
+          vars:
+            gitops_workspace_dir: "{{ gitops_workspace_dir }}"
+          when: gitops_workspace_dir is defined

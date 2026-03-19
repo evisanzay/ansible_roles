@@ -1,0 +1,11 @@
+apiVersion: {{ item.api_version }}
+kind: {{ item.kind }}
+metadata:
+  name: {{ item.name }}
+  namespace: {{ item.namespace }}
+  annotations:
+    gitops.mapfre.com/managed-by: gitops_workload_scale_render
+{% if item.kind != 'DaemonSet' %}
+spec:
+  replicas: {{ item.replicas }}
+{% endif %}

@@ -1,0 +1,50 @@
+---
+- name: Crear namespace completo para GitOps con Kustomize
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Validar parametros de entrada
+      ansible.builtin.include_role:
+        name: gitops_common_validate
+      vars:
+        gitops_validate_required_vars:
+          - repo_url
+          - namespace_name
+
+    - name: Orquestar creacion del namespace GitOps
+      block:
+        - name: Preparar workspace GitOps
+          ansible.builtin.include_role:
+            name: gitops_workspace
+          vars:
+            gitops_repo_url: "{{ repo_url }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+            gitops_workspace_base: "{{ workspace_base | default('/tmp') }}"
+            gitops_workspace_name: "{{ namespace_name }}"
+            gitops_root_dirs:
+              - "{{ repo_path | default('clusters/prod/namespaces') }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name ~ '/rbac' }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name ~ '/serviceaccounts' }}"
+
+        - name: Renderizar manifiestos del namespace
+          ansible.builtin.include_role:
+            name: gitops_namespace_render
+
+        - name: Confirmar cambios en Git
+          ansible.builtin.include_role:
+            name: gitops_git_push
+          vars:
+            gitops_repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
+            gitops_git_add_paths:
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/' ~ namespace_name }}"
+              - "{{ (repo_path | default('clusters/prod/namespaces')) ~ '/kustomization.yaml' }}"
+            gitops_commit_message: "{{ git_commit_message | default('Alta namespace ' ~ namespace_name) }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+      always:
+        - name: Limpiar workspace temporal
+          ansible.builtin.include_role:
+            name: gitops_cleanup
+          vars:
+            gitops_workspace_dir: "{{ gitops_workspace_dir }}"
+          when: gitops_workspace_dir is defined

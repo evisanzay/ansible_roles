@@ -1,0 +1,14 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: ConfigurationPolicy
+metadata:
+  name: {{ acm_configurationpolicy_name }}
+  namespace: {{ acm_policy_namespace }}
+spec:
+  remediationAction: {{ acm_policy_remediation_action }}
+  severity: {{ acm_configurationpolicy_severity }}
+  object-templates:
+{% for definition in acm_configurationpolicy_object_definitions %}
+  - complianceType: {{ definition.complianceType | default('musthave') }}
+    objectDefinition:
+{{ definition.objectDefinition | to_nice_yaml(indent=6) | indent(6, true) }}
+{% endfor %}

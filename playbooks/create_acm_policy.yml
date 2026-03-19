@@ -1,0 +1,50 @@
+---
+- name: Crear estructura base de politica ACM en GitOps
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Validar parametros de entrada
+      ansible.builtin.include_role:
+        name: gitops_common_validate
+      vars:
+        gitops_validate_required_vars:
+          - repo_url
+          - acm_policy_name
+          - acm_policy_namespace
+          - acm_configurationpolicy_object_definitions
+
+    - name: Orquestar creacion de politica ACM
+      block:
+        - name: Preparar workspace GitOps
+          ansible.builtin.include_role:
+            name: gitops_workspace
+          vars:
+            gitops_repo_url: "{{ repo_url }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+            gitops_workspace_base: "{{ workspace_base | default('/tmp') }}"
+            gitops_workspace_name: "{{ acm_policy_name }}"
+            gitops_root_dirs:
+              - "{{ repo_path | default('clusters/prod/acm-policies') }}"
+              - "{{ (repo_path | default('clusters/prod/acm-policies')) ~ '/' ~ acm_policy_name }}"
+
+        - name: Renderizar politica ACM
+          ansible.builtin.include_role:
+            name: gitops_acm_policy_render
+
+        - name: Confirmar cambios en Git
+          ansible.builtin.include_role:
+            name: gitops_git_push
+          vars:
+            gitops_repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
+            gitops_git_add_paths:
+              - "{{ (repo_path | default('clusters/prod/acm-policies')) ~ '/' ~ acm_policy_name }}"
+              - "{{ (repo_path | default('clusters/prod/acm-policies')) ~ '/kustomization.yaml' }}"
+            gitops_commit_message: "{{ git_commit_message | default('Alta politica ACM ' ~ acm_policy_name) }}"
+            gitops_branch: "{{ git_branch | default('main') }}"
+      always:
+        - name: Limpiar workspace temporal
+          ansible.builtin.include_role:
+            name: gitops_cleanup
+          vars:
+            gitops_workspace_dir: "{{ gitops_workspace_dir }}"
+          when: gitops_workspace_dir is defined
