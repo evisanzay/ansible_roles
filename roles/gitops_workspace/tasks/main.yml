@@ -1,0 +1,47 @@
+---
+- name: Validar parametros de workspace
+  ansible.builtin.assert:
+    that:
+      - gitops_repo_url is defined
+      - gitops_branch is defined
+      - gitops_workspace_base is defined
+    fail_msg: "Faltan parametros obligatorios: gitops_repo_url, gitops_branch, gitops_workspace_base"
+
+- name: Fijar identificador de ejecucion
+  ansible.builtin.set_fact:
+    gitops_run_id: "{{ gitops_run_id | default(gitops_workspace_suffix | default(now(fmt='%Y%m%d%H%M%S%f'))) }}"
+
+- name: Fijar sufijo del workspace
+  ansible.builtin.set_fact:
+    gitops_workspace_suffix: "{{ gitops_workspace_suffix | default(gitops_run_id) }}"
+
+- name: Construir rutas de workspace y checkout
+  ansible.builtin.set_fact:
+    gitops_workspace_dir: "{{ gitops_workspace_base }}/gitops-{{ gitops_workspace_name | default('workspace') }}-{{ gitops_workspace_suffix }}"
+    gitops_repo_checkout_dir: "{{ gitops_repo_checkout_dir | default(((gitops_workspace_base ~ '/gitops-' ~ (gitops_workspace_name | default('workspace')) ~ '-' ~ gitops_workspace_suffix) ~ '/repo')) }}"
+
+- name: Exponer aliases legacy del workspace
+  ansible.builtin.set_fact:
+    workspace_dir: "{{ gitops_workspace_dir }}"
+    repo_checkout_dir: "{{ gitops_repo_checkout_dir }}"
+
+- name: Crear workspace temporal
+  ansible.builtin.file:
+    path: "{{ gitops_workspace_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Clonar repositorio destino
+  ansible.builtin.git:
+    repo: "{{ gitops_repo_url }}"
+    dest: "{{ gitops_repo_checkout_dir }}"
+    version: "{{ gitops_branch }}"
+    single_branch: true
+    force: true
+
+- name: Crear directorios raiz opcionales
+  ansible.builtin.file:
+    path: "{{ gitops_repo_checkout_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ gitops_root_dirs | default([]) }}"
