@@ -1,0 +1,22 @@
+---
+- name: Fijar timestamp del workspace
+  ansible.builtin.set_fact:
+    workspace_dir: "{{ workspace_base }}/gitops-{{ namespace_name }}-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+- name: Validaciones
+  import_tasks: validate.yml
+
+- name: Preparar workspace y clonar repo
+  import_tasks: workspace.yml
+
+- name: Construir lista de recursos
+  import_tasks: build_resources.yml
+
+- name: Renderizar manifiestos
+  import_tasks: render.yml
+
+- name: Commit y push
+  import_tasks: git_push.yml
+
+- name: Limpiar workspace
+  import_tasks: cleanup.yml

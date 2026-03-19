@@ -1,0 +1,25 @@
+---
+- name: Crear workspace temporal
+  ansible.builtin.file:
+    path: "{{ workspace_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Clonar repositorio destino
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_checkout_dir }}"
+    version: "{{ git_branch }}"
+    single_branch: true
+    force: true
+
+- name: Crear estructura de carpetas del namespace
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ namespace_root_dir }}"
+    - "{{ namespace_rbac_dir }}"
+    - "{{ namespace_np_dir }}"
+    - "{{ namespace_sa_dir }}"

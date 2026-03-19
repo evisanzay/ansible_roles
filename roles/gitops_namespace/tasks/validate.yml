@@ -1,0 +1,15 @@
+---
+- name: Validar parámetros obligatorios
+  ansible.builtin.assert:
+    that:
+      - repo_url is defined
+      - namespace_name is defined
+      - admin_group is defined
+      - reader_group is defined
+    fail_msg: "Faltan parámetros obligatorios: repo_url, namespace_name, admin_group, reader_group"
+
+- name: Validar nombre del namespace
+  ansible.builtin.assert:
+    that:
+      - namespace_name is match('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
+    fail_msg: "El namespace no cumple el formato permitido por Kubernetes"

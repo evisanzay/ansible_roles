@@ -1,0 +1,30 @@
+---
+- name: Comprobar cambios git
+  ansible.builtin.command:
+    cmd: git status --porcelain
+    chdir: "{{ repo_checkout_dir }}"
+  register: git_status
+  changed_when: false
+
+- name: Añadir carpeta del namespace y kustomization padre
+  ansible.builtin.command:
+    cmd: git add "{{ repo_path }}/{{ namespace_name }}" "{{ repo_path }}/kustomization.yaml"
+    chdir: "{{ repo_checkout_dir }}"
+  when: git_status.stdout != ""
+
+- name: Hacer commit
+  ansible.builtin.command:
+    cmd: git commit -m "{{ git_commit_message }}"
+    chdir: "{{ repo_checkout_dir }}"
+  when: git_status.stdout != ""
+
+- name: Hacer push
+  ansible.builtin.command:
+    cmd: git push origin "{{ git_branch }}"
+    chdir: "{{ repo_checkout_dir }}"
+  when: git_status.stdout != ""
+
+- name: Informar si no hubo cambios
+  ansible.builtin.debug:
+    msg: "No había cambios que subir al repositorio"
+  when: git_status.stdout == ""

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ namespace_name }}
+  labels:
+{% if namespace_labels | length > 0 %}
+{% for key, value in namespace_labels.items() %}
+    {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% else %}
+    managed-by: "autoservicio"
+{% endif %}
+{% if namespace_annotations | length > 0 %}
+  annotations:
+{% for key, value in namespace_annotations.items() %}
+    {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% endif %}

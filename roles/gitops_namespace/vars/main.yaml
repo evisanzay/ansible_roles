@@ -1,0 +1,9 @@
+---
+service_accounts: "{{ ns_service_accounts | default(default_service_accounts) }}"
+
+repo_checkout_dir: "{{ workspace_dir }}/repo"
+
+namespace_root_dir: "{{ repo_checkout_dir }}/{{ repo_path }}/{{ namespace_name }}"
+namespace_rbac_dir: "{{ namespace_root_dir }}/rbac"
+namespace_np_dir: "{{ namespace_root_dir }}/networkpolicies"
+namespace_sa_dir: "{{ namespace_root_dir }}/serviceaccounts"

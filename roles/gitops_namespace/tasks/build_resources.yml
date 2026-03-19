@@ -1,0 +1,28 @@
+---
+- name: Construir lista dinámica de service accounts
+  ansible.builtin.set_fact:
+    dynamic_sa_resources: "{{ service_accounts | map(attribute='name') | map('regex_replace', '^(.*)$', 'serviceaccounts/\\1.yaml') | list }}"
+
+- name: Definir recursos base
+  ansible.builtin.set_fact:
+    base_kustomize_resources:
+      - namespace.yaml
+      - quota.yaml
+      - limitrange.yaml
+      - rbac/groups.yaml
+      - rbac/serviceaccounts-bindings.yaml
+
+#- name: Definir network policies habilitadas
+#  ansible.builtin.set_fact:
+#    networkpolicy_resources: >-
+#      {{
+#        []
+#        + (['networkpolicies/default-deny.yaml'] if network_policies.default_deny | bool else [])
+#        + (['networkpolicies/allow-dns.yaml'] if network_policies.allow_dns | bool else [])
+#        + (['networkpolicies/allow-ingress-controller.yaml'] if network_policies.allow_ingress_controller | bool else [])
+#      }}
+
+- name: Calcular resources finales de Kustomize
+  ansible.builtin.set_fact:
+#    kustomize_resources: "{{ base_kustomize_resources + networkpolicy_resources + dynamic_sa_resources }}"
+    kustomize_resources: "{{ base_kustomize_resources + dynamic_sa_resources }}"
